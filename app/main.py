@@ -11,6 +11,8 @@ from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
 from textual.worker import Worker
 
+from constants import HttpMethod
+
 
 async def send_request(client: httpx.AsyncClient, url) -> Response:
     response = await client.get(url)
@@ -98,10 +100,7 @@ class Request(Static):
         )
         yield Label("METHOD", id="method_label")
         yield Select(
-            options=[
-                ("GET", "GET"),
-                ("POST", "POST"),
-            ],
+            options=[(name, name) for name in HttpMethod.__members__],
             id="method_select",
         )
         yield Label("AUTH HEADER")
