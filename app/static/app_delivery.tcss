@@ -10,7 +10,7 @@ Request {
     margin: 1
 }
 
-#request_headers {
+#authentication {
     margin: 1;
     height: auto;
 }

@@ -15,7 +15,8 @@ class Request(Static):
     url = reactive(None)
     future_list = reactive(None)
     worker: Worker | None = None
-    authentication = reactive(False)
+    authentication = reactive(None)
+    authentication_value = reactive(None)
 
     def watch_nr_request(self, value):
         self.query_one("#nr_request").value = str(value)
@@ -26,6 +27,18 @@ class Request(Static):
             for f in futures:
                 log.write(f"> {f.result().status_code}\n")
 
+    # URL
+    @on(Input.Changed, "#url_input")
+    def url_input(self, event: Input.Changed) -> None:
+        if event.validation_result.is_valid:
+            self.url = event.value
+
+    # AUTHENTICATION
+    @on(Select.Changed, "#auth_type")
+    def auth_type_select(self, event: Select.Changed) -> None:
+        self.authentication = event.value
+
+    # NR. REQUESTS
     @staticmethod
     def validate_nr_request(count: int) -> int:
         """Validate value."""
@@ -34,15 +47,6 @@ class Request(Static):
         elif count > 10:
             count = 10
         return count
-
-    @on(Input.Changed, "#url_input")
-    def url_input(self, event: Input.Changed) -> None:
-        if event.validation_result.is_valid:
-            self.url = event.value
-
-    @on(Select.Changed, "#auth_type")
-    def auth_type_select(self, event: Select.Changed) -> None:
-        pass
 
     @on(Button.Pressed, "#increment_request")
     def increment_requests(self):
@@ -85,16 +89,14 @@ class Request(Static):
         )
         yield Label("METHOD", id="method_label")
         yield Select(
-            options=[(name, name) for name in HttpMethod.__members__],
+            options=[(name, name) for name in HttpMethod],
             id="method_select",
         )
         yield Label("AUTHENTICATION")
         yield Horizontal(
-            Select(
-                options=[(name, name) for name in AuthType.__members__], id="auth_type"
-            ),
+            Select(options=[(name, name) for name in AuthType], id="auth_type"),
             Input(id="auth_value"),
-            id="request_headers",
+            id="authentication",
         )
         yield Label("NR.")
         yield Button("+", id="increment_request", variant="success")
