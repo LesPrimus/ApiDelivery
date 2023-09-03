@@ -15,7 +15,7 @@ Request {
     height: auto;
 }
 
-#auth_key {
+#auth_type {
     height: auto;
     width: 60;
 }

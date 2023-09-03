@@ -2,7 +2,7 @@ import asyncio
 from asyncio import Future
 
 import httpx
-from httpx import Response
+from httpx import Response, Auth
 
 
 async def send_request(client: httpx.AsyncClient, url) -> Response:
@@ -10,7 +10,11 @@ async def send_request(client: httpx.AsyncClient, url) -> Response:
     return response
 
 
-async def send_batch_requests(nr: int, url: str) -> list[Future]:
+async def send_batch_requests(
+    nr: int,
+    url: str,
+    auth: Auth | None = None,
+) -> list[Future]:
     client = httpx.AsyncClient(timeout=40)
     try:
         async with asyncio.TaskGroup() as tg:

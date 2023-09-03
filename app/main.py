@@ -7,7 +7,7 @@ from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, S
 from textual.worker import Worker
 
 from utils.concurrency import send_batch_requests
-from constants import HttpMethod
+from constants import HttpMethod, AuthType
 
 
 class Request(Static):
@@ -15,6 +15,7 @@ class Request(Static):
     url = reactive(None)
     future_list = reactive(None)
     worker: Worker | None = None
+    authentication = reactive(False)
 
     def watch_nr_request(self, value):
         self.query_one("#nr_request").value = str(value)
@@ -36,9 +37,12 @@ class Request(Static):
 
     @on(Input.Changed, "#url_input")
     def url_input(self, event: Input.Changed) -> None:
-        # Updating the UI to show the reasons why validation failed
         if event.validation_result.is_valid:
             self.url = event.value
+
+    @on(Select.Changed, "#auth_type")
+    def auth_type_select(self, event: Select.Changed) -> None:
+        pass
 
     @on(Button.Pressed, "#increment_request")
     def increment_requests(self):
@@ -84,9 +88,11 @@ class Request(Static):
             options=[(name, name) for name in HttpMethod.__members__],
             id="method_select",
         )
-        yield Label("AUTH HEADER")
+        yield Label("AUTHENTICATION")
         yield Horizontal(
-            Select(options=[("Authorization:", "Authorization:")], id="auth_key"),
+            Select(
+                options=[(name, name) for name in AuthType.__members__], id="auth_type"
+            ),
             Input(id="auth_value"),
             id="request_headers",
         )
