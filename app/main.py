@@ -1,8 +1,3 @@
-import asyncio
-from asyncio import Future
-
-import httpx
-from httpx import Response
 from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
@@ -11,22 +6,8 @@ from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
 from textual.worker import Worker
 
+from utils.concurrency import send_batch_requests
 from constants import HttpMethod
-
-
-async def send_request(client: httpx.AsyncClient, url) -> Response:
-    response = await client.get(url)
-    return response
-
-
-async def send_batch_requests(nr: int, url: str) -> list[Future]:
-    client = httpx.AsyncClient(timeout=40)
-    try:
-        async with asyncio.TaskGroup() as tg:
-            tasks = [tg.create_task(send_request(client, url)) for _ in range(nr)]
-        return tasks
-    finally:
-        await client.aclose()
 
 
 class Request(Static):
