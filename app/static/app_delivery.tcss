@@ -1,0 +1,71 @@
+Request {
+    layout: vertical;
+    background: $boost;
+    height: 60;
+    margin: 2;
+    padding: 2;
+}
+
+#url_input {
+    margin: 1
+}
+
+#request_headers {
+    margin: 1;
+    height: auto;
+}
+
+#auth_key {
+    height: auto;
+    width: 60;
+}
+
+#auth_value {
+    height: auto;
+    width: 113;
+}
+
+#method_select {
+    margin: 1;
+}
+
+#start {
+    margin: 1;
+}
+
+#stop {
+    display: none;
+}
+
+#increment_request {
+    margin: 1;
+}
+
+#decrement_request {
+    margin: 1;
+}
+
+#nr_request {
+    width: 10;
+    background: $success;
+    margin: 1;
+}
+
+#log {
+    height: 20;
+    width: 100%;
+    border: solid green;
+}
+
+.started {
+    text-style: bold;
+    color: $text;
+}
+
+.started #start {
+    display: none
+}
+
+.started #stop {
+    display: block
+}

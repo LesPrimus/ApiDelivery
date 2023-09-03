@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "apidelivery"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+textual = "^0.35.1"
+httpx = "^0.24.1"
+
+
+[tool.poetry.group.dev.dependencies]
+textual-dev = "^1.1.0"
+darker = "^1.7.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
