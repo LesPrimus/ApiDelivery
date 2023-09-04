@@ -1,7 +1,6 @@
 import asyncio
 
 import httpx
-from httpx import Response
 from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
@@ -20,6 +19,8 @@ class Request(Static):
     nr_request = reactive(1)
     authentication_type = reactive(None)
     authentication_payload = reactive(None)
+    done_tasks = reactive(set())
+    pending_tasks = reactive(set())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,20 +77,26 @@ class Request(Static):
 
     # WORKERS
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        log = self.query_one("#log", Log)
         if event.state is WorkerState.SUCCESS:
+            for done_task in self.done_tasks:
+                if done_task.exception() is None:
+                    log.write_line(str(done_task.result()))
+                else:
+                    log.write_line(str(done_task.exception()))
+            for pending_task in self.pending_tasks:
+                log.write_line(f"Cancelling nr: {pending_task}")
             self.remove_class("started")
 
     async def make_requests(self):
-        log = self.query_one("#log", Log)
         async with httpx.AsyncClient() as client:
             requests = [
-                send_request(client, self.url)
+                asyncio.create_task(send_request(client, self.url))
                 for _ in range(self.nr_request)
             ]
-            responses = await asyncio.gather(*requests)
-        for res in responses:
-            res: Response
-            log.write_line(f"> status_code: {res.status_code}, {res.text}")
+            self.done_tasks, self.pending_tasks = await asyncio.wait(
+                requests, return_when=asyncio.FIRST_EXCEPTION
+            )
 
     def pre_flight_check_validations(self):
         if not self.url:
