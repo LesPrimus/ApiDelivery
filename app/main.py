@@ -8,7 +8,7 @@ from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
-from textual.worker import Worker
+from textual.worker import Worker, WorkerState
 
 from utils.concurrency import send_request
 from constants import HttpMethod, AuthType
@@ -74,6 +74,11 @@ class Request(Static):
     def decrement_requests_by_10(self):
         self.nr_request -= 10
 
+    # WORKERS
+    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        if event.state is WorkerState.SUCCESS:
+            self.remove_class("started")
+
     async def make_requests(self):
         log = self.query_one("#log", Log)
         async with httpx.AsyncClient() as client:
@@ -85,7 +90,6 @@ class Request(Static):
         for res in responses:
             res: Response
             log.write_line(f"> status_code: {res.status_code}, {res.text}")
-        self.remove_class("started")
 
     def pre_flight_check_validations(self):
         if not self.url:
@@ -99,7 +103,7 @@ class Request(Static):
             self.notify(message=msg, severity="error")
             return
         self.add_class("started")
-        self.worker = self.run_worker(self.make_requests(), exclusive=True)
+        self.worker = self.run_worker(self.make_requests())
 
     @on(Button.Pressed, "#stop")
     async def stop_requests(self):
