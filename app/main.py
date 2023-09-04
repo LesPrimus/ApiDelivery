@@ -1,3 +1,5 @@
+import asyncio
+
 from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
@@ -11,13 +13,16 @@ from constants import HttpMethod, AuthType
 
 
 class Request(Static):
-    nr_request = reactive(1)
     url = reactive(None)
+    http_method = reactive(HttpMethod.GET)
+    nr_request = reactive(1)
+    authentication_type = reactive(None)
+    authentication_payload = reactive(None)
+
     future_list = reactive(None)
     worker: Worker | None = None
-    authentication = reactive(None)
-    authentication_value = reactive(None)
 
+    # WATCHERS
     def watch_nr_request(self, value):
         self.query_one("#nr_request").value = str(value)
 
@@ -36,7 +41,11 @@ class Request(Static):
     # AUTHENTICATION
     @on(Select.Changed, "#auth_type")
     def auth_type_select(self, event: Select.Changed) -> None:
-        self.authentication = event.value
+        self.authentication_type = event.value
+
+    @on(Input.Changed, "#auth_value")
+    def auth_value_input(self, event: Select.Changed) -> None:
+        self.authentication_type = event.value
 
     # NR. REQUESTS
     @staticmethod
@@ -58,19 +67,21 @@ class Request(Static):
 
     async def make_requests(self):
         log = self.query_one("#log", Log)
-        try:
-            self.future_list = await send_batch_requests(self.nr_request, self.url)
-        except ExceptionGroup as exc_group:
-            log.write(f"{exc_group.exceptions}")
-            for exc in exc_group.exceptions:
-                log.write(f"- {exc}\n")
-        finally:
-            self.remove_class("started")
+        log.write(str(self.url))
+        await asyncio.sleep(3)
+        self.remove_class("started")
+
+    def pre_flight_check_validations(self):
+        if not self.url:
+            return "Invalid or missing url"
 
     @on(Button.Pressed, "#start")
     async def start_requests(self):
         log = self.query_one("#log", Log)
         log.clear()
+        if msg := self.pre_flight_check_validations():
+            self.notify(message=msg, severity="error")
+            return
         self.add_class("started")
         if self.url and self.nr_request:
             self.worker = self.run_worker(self.make_requests(), exclusive=True)
@@ -85,12 +96,12 @@ class Request(Static):
     def compose(self) -> ComposeResult:
         yield Label("URL", id="url_label")
         yield Input(
-            placeholder="http://httpbin.org", id="url_input", validators=[URL()]
+            placeholder="https://httpbin.org", id="url_input", validators=[URL()]
         )
-        yield Label("METHOD", id="method_label")
+        yield Label("HTTP METHOD", id="http_method_label")
         yield Select(
             options=[(name, name) for name in HttpMethod],
-            id="method_select",
+            id="http_method_select",
         )
         yield Label("AUTHENTICATION")
         yield Horizontal(

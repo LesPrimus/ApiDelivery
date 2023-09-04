@@ -25,7 +25,7 @@ Request {
     width: 113;
 }
 
-#method_select {
+#http_method_select {
     margin: 1;
 }
 
