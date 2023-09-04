@@ -1,5 +1,7 @@
 import asyncio
 
+import httpx
+from httpx import Response
 from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
@@ -8,7 +10,7 @@ from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
 from textual.worker import Worker
 
-from utils.concurrency import send_batch_requests
+from utils.concurrency import send_request
 from constants import HttpMethod, AuthType
 
 
@@ -19,8 +21,9 @@ class Request(Static):
     authentication_type = reactive(None)
     authentication_payload = reactive(None)
 
-    future_list = reactive(None)
-    worker: Worker | None = None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.worker: Worker | None = None
 
     # WATCHERS
     def watch_nr_request(self, value):
@@ -45,7 +48,7 @@ class Request(Static):
 
     @on(Input.Changed, "#auth_value")
     def auth_value_input(self, event: Select.Changed) -> None:
-        self.authentication_type = event.value
+        self.authentication_payload = event.value
 
     # NR. REQUESTS
     @staticmethod
@@ -67,8 +70,15 @@ class Request(Static):
 
     async def make_requests(self):
         log = self.query_one("#log", Log)
-        log.write(str(self.url))
-        await asyncio.sleep(3)
+        async with httpx.AsyncClient() as client:
+            requests = [
+                send_request(client, self.url)
+                for _ in range(self.nr_request)
+            ]
+            responses = await asyncio.gather(*requests)
+        for res in responses:
+            res: Response
+            log.write_line(f"> status_code: {res.status_code}, {res.text}")
         self.remove_class("started")
 
     def pre_flight_check_validations(self):
@@ -83,8 +93,7 @@ class Request(Static):
             self.notify(message=msg, severity="error")
             return
         self.add_class("started")
-        if self.url and self.nr_request:
-            self.worker = self.run_worker(self.make_requests(), exclusive=True)
+        self.worker = self.run_worker(self.make_requests(), exclusive=True)
 
     @on(Button.Pressed, "#stop")
     async def stop_requests(self):
@@ -100,6 +109,7 @@ class Request(Static):
         )
         yield Label("HTTP METHOD", id="http_method_label")
         yield Select(
+            value=HttpMethod.GET,
             options=[(name, name) for name in HttpMethod],
             id="http_method_select",
         )
@@ -117,6 +127,15 @@ class Request(Static):
 
         yield Button("Start", id="start", variant="success")
         yield Button("Stop", id="stop", variant="error")
+
+    def serialize(self):
+        return {
+            "url": self.url,
+            "method": self.http_method,
+            "auth_type": self.authentication_type,
+            "auth_payload": self.authentication_payload,
+            "nr_requests": self.nr_request,
+        }
 
 
 class AppDelivery(App):
