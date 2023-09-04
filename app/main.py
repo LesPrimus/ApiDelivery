@@ -56,8 +56,6 @@ class Request(Static):
         """Validate value."""
         if count <= 0:
             count = 1
-        elif count > 10:
-            count = 10
         return count
 
     @on(Button.Pressed, "#increment_request")
