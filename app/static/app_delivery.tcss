@@ -37,7 +37,20 @@ Request {
     display: none;
 }
 
+#nr_requests_widget {
+
+
+}
+
 #increment_request {
+    margin: 1;
+}
+
+#increment_request_10 {
+    margin: 1;
+}
+
+#decrement_request_10 {
     margin: 1;
 }
 

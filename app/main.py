@@ -62,9 +62,17 @@ class Request(Static):
     def increment_requests(self):
         self.nr_request += 1
 
+    @on(Button.Pressed, "#increment_request_10")
+    def increment_requests_by_10(self):
+        self.nr_request += 10
+
     @on(Button.Pressed, "#decrement_request")
     def decrement_requests(self):
         self.nr_request -= 1
+
+    @on(Button.Pressed, "#decrement_request_10")
+    def decrement_requests_by_10(self):
+        self.nr_request -= 10
 
     async def make_requests(self):
         log = self.query_one("#log", Log)
@@ -117,10 +125,17 @@ class Request(Static):
             Input(id="auth_value"),
             id="authentication",
         )
-        yield Label("NR.")
-        yield Button("+", id="increment_request", variant="success")
-        yield Button("-", id="decrement_request", variant="error")
-        yield Input(id="nr_request", disabled=True)
+        yield Label("NR. REQUESTS", id="nr_requests_label")
+        yield Horizontal(
+
+            Button("+1", id="increment_request", variant="success"),
+            Button("-1", id="decrement_request", variant="error"),
+            Button("+10", id="increment_request_10", variant="success"),
+            Button("-10", id="decrement_request_10", variant="error"),
+            Input(id="nr_request", disabled=True),
+            id="nr_requests_widget"
+        )
+
         yield Log(id="log")
 
         yield Button("Start", id="start", variant="success")
