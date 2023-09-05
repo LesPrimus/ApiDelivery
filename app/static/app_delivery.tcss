@@ -25,6 +25,27 @@ Request {
     width: 113;
 }
 
+#request_body {
+    padding: 1;
+}
+
+#request_body_key {
+    width: 30;
+}
+
+#request_body_value {
+    width: 70;
+}
+
+#body_button_add {
+    margin-left: 1;
+}
+
+#body_button_remove {
+    margin-left: 1;
+}
+
+
 #http_method_select {
     margin: 1;
 }

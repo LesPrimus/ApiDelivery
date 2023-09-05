@@ -9,7 +9,7 @@ from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
 from textual.worker import Worker, WorkerState
 
-from utils.concurrency import send_request, CustomAuth
+from utils.concurrency import send_request, CustomAuth, CustomBasicAuth
 from constants import HttpMethod, AuthType
 
 
@@ -92,10 +92,17 @@ class Request(Static):
         auth_type = None
         if self.authentication_type is AuthType.JWT:
             auth_type = CustomAuth(self.authentication_payload)
+        if self.authentication_type is AuthType.BASIC:
+            username, password = self.authentication_payload.split(":")
+            auth_type = CustomBasicAuth(username=username, password=password)
 
         async with httpx.AsyncClient(auth=auth_type) as client:
             requests = [
-                asyncio.create_task(send_request(client, self.url))
+                asyncio.create_task(
+                    send_request(
+                        client, self.url, http_method=self.http_method.value.lower()
+                    )
+                )
                 for _ in range(self.nr_request)
             ]
             self.done_tasks, self.pending_tasks = await asyncio.wait(
@@ -144,6 +151,16 @@ class Request(Static):
             Input(id="auth_value"),
             id="authentication",
         )
+
+        yield Label("BODY")
+        yield Horizontal(
+            Input("Key", id="request_body_key"),
+            Input("Value", id="request_body_value"),
+            Button("ADD", variant="success", id="body_button_add"),
+            Button("REMOVE", variant="error", id="body_button_remove"),
+            id="request_body",
+        )
+
         yield Label("NR. REQUESTS", id="nr_requests_label")
         yield Horizontal(
 
