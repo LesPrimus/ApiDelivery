@@ -9,7 +9,7 @@ from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
 from textual.worker import Worker, WorkerState
 
-from utils.concurrency import send_request
+from utils.concurrency import send_request, CustomAuth
 from constants import HttpMethod, AuthType
 
 
@@ -89,7 +89,11 @@ class Request(Static):
             self.remove_class("started")
 
     async def make_requests(self):
-        async with httpx.AsyncClient() as client:
+        auth_type = None
+        if self.authentication_type is AuthType.JWT:
+            auth_type = CustomAuth(self.authentication_payload)
+
+        async with httpx.AsyncClient(auth=auth_type) as client:
             requests = [
                 asyncio.create_task(send_request(client, self.url))
                 for _ in range(self.nr_request)
@@ -101,6 +105,10 @@ class Request(Static):
     def pre_flight_check_validations(self):
         if not self.url:
             return "Invalid or missing url"
+        if self.authentication_type and not self.authentication_payload:
+            return "Invalid authentication payload"
+        if self.authentication_payload and not self.authentication_type:
+            return "Invalid authentication type"
 
     @on(Button.Pressed, "#start")
     async def start_requests(self):
