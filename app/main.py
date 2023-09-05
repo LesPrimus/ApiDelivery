@@ -152,15 +152,6 @@ class Request(Static):
             id="authentication",
         )
 
-        yield Label("BODY")
-        yield Horizontal(
-            Input("Key", id="request_body_key"),
-            Input("Value", id="request_body_value"),
-            Button("ADD", variant="success", id="body_button_add"),
-            Button("REMOVE", variant="error", id="body_button_remove"),
-            id="request_body",
-        )
-
         yield Label("NR. REQUESTS", id="nr_requests_label")
         yield Horizontal(
 
