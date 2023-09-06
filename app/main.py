@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 from textual import on
@@ -6,7 +7,16 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, ScrollableContainer
 from textual.reactive import reactive
 from textual.validation import URL
-from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
+from textual.widgets import (
+    Button,
+    Footer,
+    Header,
+    Static,
+    Input,
+    Log,
+    Label,
+    Select,
+)
 from textual.worker import Worker, WorkerState
 
 from utils.concurrency import send_request, CustomAuth, CustomBasicAuth
@@ -21,6 +31,7 @@ class Request(Static):
     authentication_payload = reactive(None)
     done_tasks = reactive(set())
     pending_tasks = reactive(set())
+    payload = reactive(dict())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,6 +52,11 @@ class Request(Static):
     def url_input(self, event: Input.Changed) -> None:
         if event.validation_result.is_valid:
             self.url = event.value
+
+    # HTTP METHOD
+    @on(Select.Changed, "#http_method_select")
+    def http_method_select(self, event: Select.Changed) -> None:
+        self.http_method = event.value
 
     # AUTHENTICATION
     @on(Select.Changed, "#auth_type")
@@ -100,7 +116,10 @@ class Request(Static):
             requests = [
                 asyncio.create_task(
                     send_request(
-                        client, self.url, http_method=self.http_method.value.lower()
+                        client,
+                        self.url,
+                        self.http_method.value.lower(),
+                        data=self.payload,
                     )
                 )
                 for _ in range(self.nr_request)
@@ -116,6 +135,16 @@ class Request(Static):
             return "Invalid authentication payload"
         if self.authentication_payload and not self.authentication_type:
             return "Invalid authentication type"
+        if exc := self.load_payload():
+            return exc
+
+    def load_payload(self):
+        try:
+            payload_input = self.query_one("#payload_input", Input)
+            self.payload = json.loads(payload_input.value)
+        except Exception as exc:
+            msg = f"Invalid payload: {exc}"
+            return msg
 
     @on(Button.Pressed, "#start")
     async def start_requests(self):
@@ -125,6 +154,7 @@ class Request(Static):
             self.notify(message=msg, severity="error")
             return
         self.add_class("started")
+        log.write(str(self.serialize()))
         self.worker = self.run_worker(self.make_requests())
 
     @on(Button.Pressed, "#stop")
@@ -163,8 +193,7 @@ class Request(Static):
             id="nr_requests_widget"
         )
         yield Label("PAYLOAD", id="payload_label")
-        with ScrollableContainer():
-            yield Input(id="payload_input")
+        yield Input(id="payload_input")
 
         yield Log(id="log")
 
@@ -178,6 +207,7 @@ class Request(Static):
             "auth_type": self.authentication_type,
             "auth_payload": self.authentication_payload,
             "nr_requests": self.nr_request,
+            "payload": self.payload,
         }
 
 

@@ -4,9 +4,11 @@ import httpx
 from httpx import Response, Request
 
 
-async def send_request(client: httpx.AsyncClient, url, http_method) -> Response:
+async def send_request(
+    client: httpx.AsyncClient, url, http_method, **kwargs
+) -> Response:
     http_method = getattr(client, http_method)
-    response = await http_method(url)
+    response = await http_method(url, **kwargs)
     return response
 
 
