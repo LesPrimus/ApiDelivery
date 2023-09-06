@@ -39,8 +39,7 @@ Request {
 }
 
 #nr_requests_widget {
-
-
+    height: auto;
 }
 
 #increment_request {
@@ -65,10 +64,17 @@ Request {
     margin: 1;
 }
 
+#payload_input {
+    width: 50;
+    height: 10;
+    margin: 1;
+}
+
 #log {
-    height: 20;
+    height: 10;
     width: 100%;
     border: solid green;
+    margin: 1;
 }
 
 .started {

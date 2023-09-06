@@ -3,7 +3,7 @@ import asyncio
 import httpx
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, ScrollableContainer
 from textual.reactive import reactive
 from textual.validation import URL
 from textual.widgets import Button, Footer, Header, Static, Input, Log, Label, Select
@@ -162,6 +162,9 @@ class Request(Static):
             Input(id="nr_request", disabled=True),
             id="nr_requests_widget"
         )
+        yield Label("PAYLOAD", id="payload_label")
+        with ScrollableContainer():
+            yield Input(id="payload_input")
 
         yield Log(id="log")
 
