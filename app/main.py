@@ -4,7 +4,7 @@ import json
 import httpx
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, ScrollableContainer
+from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.validation import URL
 from textual.widgets import (
@@ -13,9 +13,9 @@ from textual.widgets import (
     Header,
     Static,
     Input,
-    Log,
     Label,
     Select,
+    RichLog,
 )
 from textual.worker import Worker, WorkerState
 
@@ -31,21 +31,24 @@ class Request(Static):
     authentication_payload = reactive(None)
     done_tasks = reactive(set())
     pending_tasks = reactive(set())
-    payload = reactive(dict())
+    payload = reactive(None)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.worker: Worker | None = None
+
+    @property
+    def _log(self) -> RichLog:
+        return self.query_one("#log", RichLog)
 
     # WATCHERS
     def watch_nr_request(self, value):
         self.query_one("#nr_request").value = str(value)
 
     def watch_future_list(self, futures):
-        log = self.query_one("#log", Log)
         if futures:
             for f in futures:
-                log.write(f"> {f.result().status_code}\n")
+                self._log.write(f"> {f.result().status_code}\n")
 
     # URL
     @on(Input.Changed, "#url_input")
@@ -93,15 +96,14 @@ class Request(Static):
 
     # WORKERS
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
-        log = self.query_one("#log", Log)
         if event.state is WorkerState.SUCCESS:
             for done_task in self.done_tasks:
                 if done_task.exception() is None:
-                    log.write_line(str(done_task.result()))
+                    self._log.write(str(done_task.result()))
                 else:
-                    log.write_line(str(done_task.exception()))
+                    self._log.write(str(done_task.exception()))
             for pending_task in self.pending_tasks:
-                log.write_line(f"Cancelling nr: {pending_task}")
+                self._log.write(f"Cancelling nr: {pending_task}")
             self.remove_class("started")
 
     async def make_requests(self):
@@ -112,16 +114,16 @@ class Request(Static):
             username, password = self.authentication_payload.split(":")
             auth_type = CustomBasicAuth(username=username, password=password)
 
+        params = {
+            "url": self.url,
+            "http_method": self.http_method.value.lower(),
+        }
+        if self.http_method in {HttpMethod.POST}:
+            params.update(data=self.payload)
+
         async with httpx.AsyncClient(auth=auth_type) as client:
             requests = [
-                asyncio.create_task(
-                    send_request(
-                        client,
-                        self.url,
-                        self.http_method.value.lower(),
-                        data=self.payload,
-                    )
-                )
+                asyncio.create_task(send_request(client, **params))
                 for _ in range(self.nr_request)
             ]
             self.done_tasks, self.pending_tasks = await asyncio.wait(
@@ -141,20 +143,20 @@ class Request(Static):
     def load_payload(self):
         try:
             payload_input = self.query_one("#payload_input", Input)
-            self.payload = json.loads(payload_input.value)
+            if value := payload_input.value:
+                self.payload = json.loads(value)
         except Exception as exc:
             msg = f"Invalid payload: {exc}"
             return msg
 
     @on(Button.Pressed, "#start")
     async def start_requests(self):
-        log = self.query_one("#log", Log)
-        log.clear()
+        self._log.clear()
         if msg := self.pre_flight_check_validations():
             self.notify(message=msg, severity="error")
             return
         self.add_class("started")
-        log.write(str(self.serialize()))
+        self._log.write(str(self.serialize()))
         self.worker = self.run_worker(self.make_requests())
 
     @on(Button.Pressed, "#stop")
@@ -195,7 +197,7 @@ class Request(Static):
         yield Label("PAYLOAD", id="payload_label")
         yield Input(id="payload_input")
 
-        yield Log(id="log")
+        yield RichLog(highlight=True, markup=True, id="log")
 
         yield Button("Start", id="start", variant="success")
         yield Button("Stop", id="stop", variant="error")
